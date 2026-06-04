@@ -185,7 +185,7 @@ streamlit run app.py
 
 ---
 
-## 项目亮点（面试可讲）
+## 项目亮点
 
 1. **RAG 全链路**：解析 → 分块 → Embedding → 持久化向量库 → Top-K → 引用溯源，而非单次 Prompt 塞全文。  
 2. **附件预解析**：上传即写入 `session_state` + System 注入，解决「已上传但追问失忆」问题。  
