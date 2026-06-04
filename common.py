@@ -1,4 +1,8 @@
-from openai import OpenAI
+"""兼容层：统一经 LLMClient 调用。"""
+from typing import List, Optional
+
+from core.config import load_settings
+from core.llm_client import LLMClient
 
 
 def get_llm_response(
@@ -7,53 +11,44 @@ def get_llm_response(
     system_prompt="",
     few_shot_prompt=None,
     user_prompt="",
+    messages=None,
     model="qwen-plus",
-    stream=False
+    temperature=None,
+    stream=False,
 ):
-    """
-    通用 LLM 请求函数
+    """保留旧接口，内部使用 OpenAI client（来自 LLMClient 或裸客户端）。"""
+    if messages is not None:
+        msg_list = list(messages)
+    else:
+        msg_list = []
+        if system_prompt:
+            msg_list.append({"role": "system", "content": system_prompt})
+        if few_shot_prompt and isinstance(few_shot_prompt, list):
+            msg_list.extend(few_shot_prompt)
+        if user_prompt:
+            msg_list.append({"role": "user", "content": user_prompt})
 
-    参数：
-    client              OpenAI 客户端
-    system_prompt       系统提示词
-    few_shot_prompt     小样本提示词(list)
-    user_prompt         用户输入
-    model               模型名称
-    stream              是否流式输出
-    """
+    kwargs = {"model": model, "messages": msg_list, "stream": stream}
+    if temperature is not None:
+        kwargs["temperature"] = temperature
 
-    # 初始化消息列表
-    messages = []
-
-    # system prompt
-    if system_prompt:
-        messages.append({
-            "role": "system",
-            "content": system_prompt
-        })
-
-    # few-shot
-    if few_shot_prompt:
-        if isinstance(few_shot_prompt, list):
-            messages.extend(few_shot_prompt)
-
-    # user prompt
-    if user_prompt:
-        messages.append({
-            "role": "user",
-            "content": user_prompt
-        })
-
-    # 请求模型
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        stream=stream
-    )
-
-    # 非流式
+    response = client.chat.completions.create(**kwargs)
     if not stream:
         return response.choices[0].message.content
-
-    # 流式
     return response
+
+
+def build_llm_client(
+    *,
+    api_key_override: str = "",
+    base_url_override: str = "",
+    model_override: str = "",
+    vendor: str = "ChatTongYi",
+) -> LLMClient:
+    settings = load_settings(
+        api_key_override=api_key_override,
+        base_url_override=base_url_override,
+        model_override=model_override,
+        vendor=vendor,
+    )
+    return LLMClient(settings)

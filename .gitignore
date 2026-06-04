@@ -1,4 +1,36 @@
-.idea/
-__pycache__/
-*.pyc
+# 环境与密钥（切勿提交）
+.env
+.env.local
+.env.*.local
+*.pem
+secrets/
+
+# 本地数据与向量库
+data/
+*.db
+chroma/
+
+# Python
 .venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# IDE / 工具
+.idea/
+.vscode/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 系统与日志
+.DS_Store
+Thumbs.db
+*.log
+
+# Streamlit
+.streamlit/secrets.toml
