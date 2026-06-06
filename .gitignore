@@ -5,8 +5,10 @@
 *.pem
 secrets/
 
-# 本地数据与向量库
-data/
+# 本地数据与向量库（保留示例 seed）
+data/*
+!data/metrics.seed.json
+!data/.gitkeep
 *.db
 chroma/
 

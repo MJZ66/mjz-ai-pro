@@ -185,7 +185,23 @@ streamlit run app.py
 
 ---
 
-## 项目亮点
+## 项目数据（运行统计）
+
+侧边栏 **「设置」** 内展示本地累计数据（持久化于 `data/metrics.json`，首次启动加载 `data/metrics.seed.json` 示例基线）：
+
+| 指标 | 示例基线 | 说明 |
+|------|----------|------|
+| **项目访问量** | 128+ | 每次新会话访问 +1 |
+| **平均响应** | ~1.8 s | LLM 调用端到端耗时均值 |
+| **文档处理** | 24+ | RAG 入库文件数 |
+| 已索引片段 | 412+ | 分块向量片段累计 |
+| 附件解析 | 18+ | 多轮对话附件解析次数 |
+
+> 演示/测试数据见 [`data/metrics.seed.json`](data/metrics.seed.json)。真实运行后数据写入 `data/metrics.json`（已 gitignore，不上传）。
+
+---
+
+## 项目亮点（面试可讲）
 
 1. **RAG 全链路**：解析 → 分块 → Embedding → 持久化向量库 → Top-K → 引用溯源，而非单次 Prompt 塞全文。  
 2. **附件预解析**：上传即写入 `session_state` + System 注入，解决「已上传但追问失忆」问题。  
@@ -218,7 +234,9 @@ mjz-ai-pro/
 │   ├── calculator.py
 │   └── text_summary.py
 ├── ui/                         # 主题、上传区、面板
-├── utils/                      # 文件、附件上下文、会话、流式 UI
+├── utils/                      # 文件、附件上下文、会话、流式 UI、metrics
+├── data/
+│   └── metrics.seed.json       # 运行统计示例基线（可提交）
 ├── tests/
 ├── docs/
 ├── assets/                     # README 运行截图

@@ -5,6 +5,8 @@ from typing import Any, List, Optional, Union
 
 import streamlit as st
 
+from ui.components import render_upload_visual
+
 DROP_ZONE_LABEL = "拖拽文件到此处，或点击选择文件"
 
 RAG_UPLOAD_TYPES = ["txt", "md", "pdf", "docx", "xlsx", "xls"]
@@ -47,7 +49,10 @@ def render_drag_drop_uploader(
     if len(file_types) > 8:
         hint += " …"
 
-    st.caption(f"⬆ 拖拽文件到下方区域，或点击选择 · {hint}")
+    render_upload_visual(
+        title="拖拽或点击上传",
+        subtitle=hint,
+    )
 
     uploaded = st.file_uploader(
         DROP_ZONE_LABEL,
