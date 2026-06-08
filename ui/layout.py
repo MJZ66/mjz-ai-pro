@@ -191,6 +191,22 @@ def render_sidebar() -> Dict[str, Any]:
         if st.button("清空当前会话", use_container_width=True, key="ws_clear_chat"):
             st.session_state["_clear_chat_pending"] = True
 
+        from utils.export_chat import build_export_filename, export_chat_to_markdown
+
+        export_title = f"MJZ AI Pro · {agent_type}"
+        export_md = export_chat_to_markdown(
+            st.session_state.get("messages", []),
+            title=export_title,
+        )
+        st.download_button(
+            "导出当前对话 Markdown",
+            data=export_md,
+            file_name=build_export_filename(),
+            mime="text/markdown",
+            use_container_width=True,
+            key="ws_export_chat",
+        )
+
     return {
         "mode": mode,
         "vendor": vendor,

@@ -1,7 +1,9 @@
 """RAG 完整流程。"""
 from typing import List, Optional, Tuple
 
+from core.config import resolve_rag_retrieval_mode
 from core.llm_client import LLMClient
+from rag.bm25_index import BM25Index
 from rag.document_loader import DocumentLoadError, load_from_upload
 from rag.retriever import RetrievedChunk, Retriever
 from rag.text_splitter import split_text
@@ -18,11 +20,26 @@ RAG_SYSTEM_PROMPT = """你是 MJZ AI Pro 的知识库问答助手。
 """
 
 
+def _load_bm25_index(persist_dir: str) -> BM25Index:
+    try:
+        return BM25Index.load(persist_dir)
+    except Exception as exc:
+        logger.warning("BM25 索引加载失败，使用空索引：%s", exc)
+        return BM25Index()
+
+
 class RAGAgent:
     def __init__(self, llm_client: LLMClient, vector_store: VectorStore, top_k: int = 4):
         self.llm = llm_client
         self.vector_store = vector_store
-        self.retriever = Retriever(vector_store, top_k=top_k)
+        self.bm25_index = _load_bm25_index(vector_store.persist_dir)
+        retrieval_mode = resolve_rag_retrieval_mode()
+        self.retriever = Retriever(
+            vector_store,
+            top_k=top_k,
+            mode=retrieval_mode,
+            bm25_index=self.bm25_index,
+        )
 
     def ingest_upload(self, uploaded_file) -> Tuple[int, str]:
         """上传 → 解析 → 分块 → 向量化 → 入库。"""
@@ -37,12 +54,21 @@ class RAGAgent:
 
             embeddings = self.llm.embed_texts([c.content for c in chunks])
             count = self.vector_store.add_chunks(chunks, embeddings)
+            if count > 0:
+                self._sync_bm25_index(chunks)
             return count, f"已成功入库 {count} 个片段（来源：{filename}）。"
         except DocumentLoadError as exc:
             return 0, str(exc)
         except Exception as exc:
             logger.exception("RAG 入库失败")
             return 0, user_friendly_error(exc)
+
+    def _sync_bm25_index(self, chunks) -> None:
+        try:
+            self.bm25_index.add_chunks(chunks)
+            self.bm25_index.save(self.vector_store.persist_dir)
+        except Exception as exc:
+            logger.exception("BM25 索引同步失败：%s", exc)
 
     def build_context(self, retrieved: List[RetrievedChunk]) -> str:
         if not retrieved:

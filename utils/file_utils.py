@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 from utils.logger import get_logger, user_friendly_error
 

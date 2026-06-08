@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax check
+        run: |
+          python -m py_compile app.py
+          python -m py_compile core/config.py
+          python -m py_compile rag/bm25_index.py rag/hybrid_fusion.py rag/retriever.py rag/rag_agent.py
+          python -m py_compile utils/export_chat.py utils/file_utils.py tools/calculator.py
+
+      - name: Run tests
+        run: pytest -q
+        env:
+          OPENAI_API_KEY: ""
+          DASHSCOPE_API_KEY: ""
+          DEEPSEEK_API_KEY: ""
+          EMBEDDING_API_KEY: ""

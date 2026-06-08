@@ -25,6 +25,8 @@ DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DEFAULT_MODEL = "qwen-plus"
 DEFAULT_EMBEDDING_MODEL = "text-embedding-v3"
 DEFAULT_VECTOR_STORE_DIR = "data/vector_store"
+DEFAULT_RAG_RETRIEVAL_MODE = "vector"
+VALID_RAG_RETRIEVAL_MODES = frozenset({"vector", "hybrid"})
 
 # 厂商常量（UI 层使用）
 VENDOR_CHATTONGYI = "ChatTongYi"
@@ -48,6 +50,7 @@ class AppSettings:
     embedding_base_url: str
     vector_store_dir: str
     vendor: str = VENDOR_CHATTONGYI
+    rag_retrieval_mode: str = DEFAULT_RAG_RETRIEVAL_MODE
 
     def validate(self, require_api_key: bool = True) -> List[str]:
         errors: List[str] = []
@@ -87,6 +90,21 @@ def _first_non_empty(*values: Optional[str]) -> str:
 def normalize_sidebar_override(value: Optional[str]) -> str:
     """侧边栏留空时不覆盖 .env。"""
     return (value or "").strip()
+
+
+def resolve_rag_retrieval_mode(raw: Optional[str] = None) -> str:
+    """
+    解析 RAG 检索模式：vector（默认）或 hybrid。
+    非法值静默回退为 vector，与项目其他 env 默认值策略一致。
+    """
+    mode = _first_non_empty(
+        raw,
+        os.getenv("RAG_RETRIEVAL_MODE"),
+        DEFAULT_RAG_RETRIEVAL_MODE,
+    ).lower()
+    if mode in VALID_RAG_RETRIEVAL_MODES:
+        return mode
+    return DEFAULT_RAG_RETRIEVAL_MODE
 
 
 def _normalize_openai_base_url(url: str) -> str:
@@ -200,6 +218,8 @@ def load_settings(
         vendor, env_key
     )
 
+    rag_mode = resolve_rag_retrieval_mode()
+
     return AppSettings(
         openai_api_key=env_key,
         openai_base_url=env_base,
@@ -209,6 +229,7 @@ def load_settings(
         embedding_base_url=embed_base,
         vector_store_dir=str(Path(vector_dir).resolve()),
         vendor=vendor,
+        rag_retrieval_mode=rag_mode,
     )
 
 

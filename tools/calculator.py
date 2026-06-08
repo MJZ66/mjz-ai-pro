@@ -16,6 +16,8 @@ _ALLOWED_OPS = {
 }
 
 _MAX_EXPRESSION_LEN = 200
+# Python 3.14+ 移除 ast.Num；3.8+ 数字字面量均为 ast.Constant
+_AST_NUM = getattr(ast, "Num", None)
 
 
 def _safe_eval_node(node: ast.AST) -> Union[int, float]:
@@ -23,7 +25,7 @@ def _safe_eval_node(node: ast.AST) -> Union[int, float]:
         if isinstance(node.value, (int, float)):
             return node.value
         raise ValueError("仅支持数字常量")
-    if isinstance(node, ast.Num):  # pragma: no cover - py<3.8
+    if _AST_NUM is not None and isinstance(node, _AST_NUM):
         return node.n
     if isinstance(node, ast.UnaryOp) and type(node.op) in _ALLOWED_OPS:
         return _ALLOWED_OPS[type(node.op)](_safe_eval_node(node.operand))

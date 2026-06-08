@@ -7,9 +7,10 @@
 
 <p align="center">
   <a href="https://github.com/MJZ66/mjz-ai-pro"><img src="https://img.shields.io/badge/GitHub-mjz--ai--pro-181717?logo=github" alt="GitHub"></a>
-  <img src="https://img.shields.io/badge/Python-3.8%2B-blue?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
   <img src="https://img.shields.io/badge/ChromaDB-VectorDB-orange" alt="ChromaDB">
+  <img src="https://img.shields.io/github/actions/workflow/status/MJZ66/mjz-ai-pro/ci.yml?branch=main&label=CI&logo=github" alt="CI">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
 </p>
 
@@ -36,7 +37,7 @@
 
 ```mermaid
 flowchart TB
-    subgraph UI["Streamlit 工作台 app.py"]
+    subgraph AppModes["app.py · 三模式"]
         M1[多轮对话]
         M2[RAG 知识库]
         M3[Agent 工具]
@@ -61,10 +62,18 @@ flowchart TB
         LLM[llm_client chat / stream / embed]
     end
 
+    subgraph UI["ui/ · Streamlit 工作台"]
+        FAC[facade 统一导入门面]
+        LAY[layout 侧栏/聊天/输入]
+        THM[theme.css 主题样式]
+    end
+
     subgraph Utils["utils/"]
         FU[file_utils 附件加载]
         AC[attachment_context 预解析注入]
         SU[session_utils 会话]
+        MT[metrics 运行统计]
+        MI[math_intent 快捷算式]
     end
 
     subgraph Tools["tools/"]
@@ -78,6 +87,8 @@ flowchart TB
         EMB[通义 Embedding RAG]
     end
 
+    M1 --> FAC
+    FAC --> LAY
     M1 --> CA --> LLM
     M1 --> FU --> AC
     M2 --> RA --> DL --> TS --> VS
@@ -103,11 +114,11 @@ flowchart TB
 
 | 模式 | 能力 | 典型场景 |
 |------|------|----------|
-| 多轮对话 | 角色 Prompt、流式输出、会话管理 | 简历分析、代码助手、文案生成 |
-| 附件能力 | 拖入解析、System 注入、免「先点分析」 | PDF 简历 →「这个人的专业是什么？」 |
-| RAG 知识库 | 多格式入库、检索问答、引用片段 | 技术文档 / 笔记库问答 |
-| Agent 工具 | 安全计算器、文本摘要 | `(125+76)*9`、长文总结 |
-| 多模型 | 通义 / DeepSeek 切换；RAG 向量固定通义 | 对话用 DeepSeek，向量用 DashScope |
+| 多轮对话 | 6 类角色 Prompt、流式输出、快捷算式、会话管理 | 简历分析、代码助手、文案生成 |
+| 附件能力 | sidebar 上传解析、System 注入、连续追问 | PDF 简历 →「这个人的专业是什么？」 |
+| RAG | 多格式入库、Top-K 检索、引用卡片；**Hybrid 检索（BM25+向量+RRF）代码层已就绪，默认仍用向量** | 技术文档 / 笔记库问答 |
+| Agent 工具 | AST 安全计算器、文本摘要 | `(125+76)*9`、长文总结 |
+| 多模型 | 通义 / DeepSeek 切换；RAG 向量走通义 Embedding | 对话用 DeepSeek，向量用 DashScope |
 
 ---
 
@@ -166,7 +177,9 @@ copy .env.example .env    # 填入你自己的 Key，勿提交 .env
 streamlit run app.py
 ```
 
-浏览器访问 **http://localhost:8501**。侧边栏 API Key 可留空（自动读取项目根目录 `.env`）。
+浏览器访问 **http://localhost:8501**。侧边栏使用 **原生 `st.sidebar`**；API Key 可留空（自动读取项目根目录 `.env`）。
+
+> **Python 版本**：推荐 **3.10–3.13**；已在 **3.14.0** 下完成开发与全量测试（`calculator` 已兼容 3.14 移除的 `ast.Num`）。
 
 配置详解见 [docs/配置与安全说明.md](docs/配置与安全说明.md)。
 
@@ -176,12 +189,12 @@ streamlit run app.py
 
 | 层级 | 技术 |
 |------|------|
-| 语言 | Python 3.8+ |
-| UI | Streamlit、自定义主题（Fraunces + Sora） |
+| 语言 | Python 3.10+（3.14 已验证） |
+| UI | Streamlit 原生 sidebar · `ui/facade` · `theme.css` 工作台主题 |
 | LLM | OpenAI SDK · Compatible API（通义 / DeepSeek） |
-| RAG | ChromaDB、自研分块/检索流水线 |
-| 文档 | PyPDF2、python-docx、openpyxl、Pillow |
-| 工程 | python-dotenv、pytest、分层包结构 |
+| RAG | ChromaDB、BM25（`rank-bm25`）、RRF 融合、自研分块/检索流水线 |
+| 文档 | pypdf、python-docx、openpyxl、Pillow |
+| 工程 | python-dotenv、pytest（86 用例）、分层包结构 |
 
 ---
 
@@ -204,11 +217,12 @@ streamlit run app.py
 ## 项目亮点（面试可讲）
 
 1. **RAG 全链路**：解析 → 分块 → Embedding → 持久化向量库 → Top-K → 引用溯源，而非单次 Prompt 塞全文。  
-2. **附件预解析**：上传即写入 `session_state` + System 注入，解决「已上传但追问失忆」问题。  
-3. **多厂商配置分离**：DeepSeek 对话 Key 与通义 Embedding Key 解耦，避免 401/404。  
-4. **安全计算器**：`ast` 白名单求值，拒绝裸 `eval`。  
-5. **可测试**：47+ 单元测试覆盖配置、RAG、附件、计算器、数学意图等。  
-6. **工程化意识**：`.env.example`、SECURITY、日志与友好错误、`.gitignore` 排除密钥与向量数据。
+2. **Hybrid Retrieval**：支持 **BM25 + 向量 + RRF** 融合检索（`rag/bm25_index.py`、`rag/hybrid_fusion.py`、`Retriever mode="hybrid"`）；入库时已同步构建 `bm25_index.json`。**当前默认仍使用向量检索**（`RAGAgent` → `mode="vector"`），Hybrid 已在代码层就绪，显式切换 `mode="hybrid"` 即可启用。  
+3. **附件预解析**：上传即写入 `session_state` + System 注入，解决「已上传但追问失忆」问题。  
+4. **多厂商配置分离**：DeepSeek 对话 Key 与通义 Embedding Key 解耦，避免 401/404。  
+5. **安全计算器**：`ast` 白名单求值，拒绝裸 `eval`。  
+6. **可测试**：**86** 项单元测试（19 个测试文件）覆盖配置、RAG、Hybrid 检索、附件、计算器、数学意图、指标、对话导出等。  
+7. **工程化意识**：`.env.example`、`ui/facade` 导入兜底、日志与友好错误、`.gitignore` 排除密钥与向量数据。
 
 ---
 
@@ -216,7 +230,10 @@ streamlit run app.py
 
 ```
 mjz-ai-pro/
-├── app.py                      # Streamlit 主入口（三模式路由）
+├── app.py                      # Streamlit 主入口（三模式路由，~540 行）
+├── common.py                   # build_llm_client 工厂
+├── config.py                   # 兼容旧导入（主配置见 core/config.py）
+├── .streamlit/config.toml      # Streamlit 客户端配置
 ├── core/
 │   ├── config.py               # 环境变量、厂商/Embedding 解析
 │   └── llm_client.py           # chat / stream / embeddings
@@ -228,16 +245,24 @@ mjz-ai-pro/
 │   ├── document_loader.py
 │   ├── text_splitter.py
 │   ├── vector_store.py         # ChromaDB
-│   ├── retriever.py
+│   ├── bm25_index.py           # BM25 关键词索引
+│   ├── hybrid_fusion.py        # RRF 融合
+│   ├── retriever.py            # vector / hybrid 检索
 │   └── rag_agent.py
 ├── tools/
-│   ├── calculator.py
+│   ├── calculator.py           # AST 安全求值（兼容 Python 3.14）
 │   └── text_summary.py
-├── ui/                         # 主题、上传区、面板
-├── utils/                      # 文件、附件上下文、会话、流式 UI、metrics
+├── ui/
+│   ├── facade.py               # app.py 唯一 UI 导入门面
+│   ├── layout.py               # 侧栏、聊天区、输入栏
+│   ├── theme.css / theme.py    # 工作台样式
+│   ├── upload_zone.py          # 拖拽上传
+│   ├── panels.py               # 面板组件
+│   └── animations.py           # GSAP 动画注入
+├── utils/                      # 文件、附件、会话、流式 UI、metrics、math_intent
 ├── data/
 │   └── metrics.seed.json       # 运行统计示例基线（可提交）
-├── tests/
+├── tests/                      # 19 个测试文件，86 条用例
 ├── docs/
 ├── assets/                     # README 运行截图
 ├── .env.example
@@ -250,17 +275,42 @@ mjz-ai-pro/
 
 ```bash
 pytest tests/ -v
+# 或快速汇总
+pytest tests/ -q
 ```
+
+当前：**86 passed，0 warning**（19 个测试文件）。主要覆盖：`core/config`、RAG 与 Hybrid 检索、附件上下文、计算器与 `math_intent`、会话工具、运行指标、对话导出等。
+
+PDF 解析已迁移至 **pypdf**（任务 D1），全量测试无 DeprecationWarning。
+
+### RAG 检索模式（`.env`）
+
+在 `.env` 中通过 **`RAG_RETRIEVAL_MODE`** 切换（见 `.env.example`）：
+
+| 值 | 行为 |
+|----|------|
+| `vector` | **默认**。纯 Chroma 向量 Top-K 检索 |
+| `hybrid` | 启用 **BM25 + Vector + RRF** 融合检索 |
+
+非法值会静默回退为 `vector`。`app.py` 暂未提供 UI 开关，需开发者配置环境变量。
+
+### 持续集成（CI）
+
+推送或向 `main` 发起 Pull Request 时，GitHub Actions 会自动执行：
+
+1. 安装 `requirements.txt` 依赖（Python **3.11**）
+2. `py_compile` 语法检查（`app.py` 及核心模块）
+3. `pytest -q` 全量测试
+
+工作流定义见 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)。测试使用 `monkeypatch` / 临时目录，**不需要**配置真实 API Key，也不依赖本地 `data/vector_store`。
 
 ---
 
 ## 未来规划
 
 - [ ] Streamlit Cloud / Docker 一键部署
-- [ ] PyPDF2 → pypdf，提升 PDF 中文解析质量
-- [ ] 混合检索（关键词 + 向量）与重排序
+- [ ] RAG Hybrid 检索 UI / 配置开关（代码层已就绪）
 - [ ] 更多 Agent 工具（网页摘要、代码执行沙箱）
-- [ ] 对话导出 Markdown / 知识库批量管理
 
 ---
 
